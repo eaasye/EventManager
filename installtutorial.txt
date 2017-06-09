@@ -1,0 +1,5 @@
+Download the compiled plugin, and put it in \tf2\tf\addons\sourcemod\plugins
+
+Download morecolors.inc and put it in tf2\tf\addons\sourcemod\scripting\include
+
+morecolors download:https://forums.alliedmods.net/showthread.php?t=185016
