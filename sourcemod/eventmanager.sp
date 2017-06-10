@@ -4,7 +4,7 @@
 #include <morecolors>
 //Comment out these includes if you don't use on them on your server(and comment at line 506)
 #include <basecomm>
-//#include <sourcecomms>
+#include <sourcecomms>
 
 #pragma newdecls required
 #pragma semicolon 1
@@ -76,6 +76,7 @@ public void OnPluginStart() {
 	
 	
 	// ConVars
+	CreateConVar("sm_eventmanager_version", PLUGIN_VERSION, "*DONT MANUALLY CHANGE*Event-Manager Plugin Version", FCVAR_NOTIFY | FCVAR_DONTRECORD | FCVAR_SPONLY);
 	eventTalkEnable = CreateConVar("sm_eventtalk_enable", "0", "Mutes non admins, from eventmanager plugin.");
 	eventTalkEnable.AddChangeHook(OnConVarChange);
 }
@@ -445,8 +446,8 @@ public void EventTalk() {
 		for (int i = 1; i <= MaxClients; i++) {
 			if (!IsValidClient(i))continue;
 			//Comment this if statement if you don't have sourcecomms!
-			//if(SourceComms_GetClientMuteType(i) == bNot)
-			//	SetClientListeningFlags(i, VOICE_NORMAL);
+			if(SourceComms_GetClientMuteType(i) == bNot)
+				SetClientListeningFlags(i, VOICE_NORMAL);
 			
 			//Comment this if statement if you don't have basecomm!
 			if (!BaseComm_IsClientMuted(i))
