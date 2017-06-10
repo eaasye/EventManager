@@ -18,6 +18,7 @@ bool rLocationSet = false;
 bool sLocationSet = false;
 bool eventStart = false;
 bool skipHook = false;
+bool skipChat = false;
 bool s1 = false;
 bool s2 = false;
 bool s3 = false;
@@ -26,6 +27,8 @@ bool s5 = false;
 
 int classArray[] =  {0, 1, 3, 7, 4, 6, 9, 5, 2, 8};
 int eventClass = 0;
+
+char classStringArray[][] =  {"Any", "Scout", "Soldier", "Pyro", "Demo", "Heavy", "Engineer", "Medic", "Sniper", "Spy"};
 
 float bLocation[3];
 float rLocation[3];
@@ -47,16 +50,15 @@ public Plugin myinfo = {
 public void OnPluginStart() {
 	// Commands
 	RegAdminCmd("sm_startevent", Command_StartEvent, ADMFLAG_GENERIC, "Start's an event.");
-	RegAdminCmd("sm_stopevent", Command_StopEvent, ADMFLAG_GENERIC, "Closes the joining time for the event.");
+	RegAdminCmd("sm_stopevent", Command_StopEvent, ADMFLAG_GENERIC, "Closes the joining period for the event.");
 	RegAdminCmd("sm_blocation", Command_SetBluLocation, ADMFLAG_GENERIC, "Set's the location where blu will teleport to.");
 	RegAdminCmd("sm_rlocation", Command_SetRedLocation, ADMFLAG_GENERIC, "Set's the location where red will teleport to.");
 	RegAdminCmd("sm_setspectate", Command_SetSpectateLocation, ADMFLAG_GENERIC, "Set's the location where spectators will teleport to.");
-	RegAdminCmd("sm_event", Command_EventMenu, ADMFLAG_GENERIC, "Menu interface for event manager plugin.");
-	RegAdminCmd("sm_eventmenu", Command_EventMenu, ADMFLAG_GENERIC, "Menu interface for event manager plugin.");
+	RegAdminCmd("sm_setclass", Command_SetClass, ADMFLAG_GENERIC, "Set's the class the player will be set to before joining the event.");
+	RegAdminCmd("sm_event", Command_EventMenu, ADMFLAG_GENERIC, "Opens the menu interface for event manager plugin.");
 	
 	RegConsoleCmd("sm_joinevent", Command_JoinEvent, "When an event is started, use this to join it!");
 	RegConsoleCmd("sm_spectate", Command_Spectate, "Spectate an event.");
-	RegConsoleCmd("sm_test", TEST);
 	
 	
 	// Menus
@@ -100,8 +102,6 @@ public void OnClientPostAdminCheck(int client) {
 ********************************************/
 
 
-public Action TEST(int client, int args) {
-}
 public Action Command_EventMenu(int client, int args) {
 	if (!IsValidClient(client))return Plugin_Handled;
 	eventMenu.Display(client, MENU_TIME_FOREVER);
@@ -182,23 +182,47 @@ public Action Command_SetRedLocation(int client, int args) {
 
 public Action Command_SetSpectateLocation(int client, int args) {
 	if (!IsValidClient(client))return Plugin_Handled;
-	if (!eventStart) {
-		if (!sLocationSet) {
-			GetClientAbsOrigin(client, sLocation);
-			CPrintToChat(client, "{GREEN}[Event]{Default} Location has been set");
-			sLocationSet = true;
-		}
-		else {
-			CPrintToChat(client, "{GREEN}[Event]{Default} Location has been removed.");
-			sLocationSet = false;
-		}
-		ConfigureMenuBuilder();
-		return Plugin_Handled;
+	if (!sLocationSet) {
+		GetClientAbsOrigin(client, sLocation);
+		CPrintToChat(client, "{GREEN}[Event]{Default} Location has been set");
+		sLocationSet = true;
 	}
 	else {
-		CPrintToChat(client, "{GREEN}[Event]{Default} You cannot modify event parameters while an event is running");
+		CPrintToChat(client, "{GREEN}[Event]{Default} Location has been removed.");
+		sLocationSet = false;
+	}
+	ConfigureMenuBuilder();
+	return Plugin_Handled;
+}
+
+public Action Command_SetClass(int client, int args) {
+	if(eventStart) {
+		CPrintToChat(client, "{GREEN}[Event]{Default} You can not modify event parameters while an event is running");
 		return Plugin_Handled;
 	}
+	char arg1[32];
+	int iBuffer;
+	if (args >= 1 && GetCmdArg(1, arg1, sizeof(arg1))) {
+		iBuffer = StringToInt(arg1);
+		if(iBuffer >= 0 && iBuffer < 10) {
+			eventClass = iBuffer;
+			if(!skipChat)
+				CPrintToChatAll("{GREEN}[Event]{Default} Class selected: %s", classStringArray[eventClass]);
+		}
+		else {
+			CPrintToChat(client, "{GREEN}[Event]{Default} Paramater out of bounds, enter 0 for no class, 1-9 for classes(in order).");
+			return Plugin_Handled;
+		}
+	}
+	else {
+		if (eventClass < 9)eventClass++;
+		else eventClass = 0;
+		if(!skipChat)
+			CPrintToChatAll("{GREEN}[Event]{Default} Class selected: %s", classStringArray[eventClass]);
+	}
+	skipChat = false;
+	ConfigureMenuBuilder();
+	return Plugin_Handled;
 }
 
 public Action Command_JoinEvent(int client, int args) {
@@ -267,10 +291,7 @@ public int EventMenuHandler(Menu menu, MenuAction action, int param1, int param2
 			FakeClientCommand(param1, "sm_stopevent");
 			
 		if (StrEqual(info, "configureevent", false))
-			if (!eventStart)
 				configureEventMenu.Display(param1, MENU_TIME_FOREVER);
-			else
-			CPrintToChat(param1, "{GREEN}[Event]{Default} You can not modify event paramaters while an event is running.");
 		if (StrEqual(info, "eventtalk", false)) {
 			if (eventTalkEnable.BoolValue) {
 				skipHook = true;
@@ -293,23 +314,29 @@ public int ConfigureMenuHandler(Menu menu, MenuAction action, int param1, int pa
 		configureEventMenu.GetItem(param2, info, sizeof(info));
 		if (StrEqual(info, "blocation", false)) {
 			FakeClientCommand(param1, "sm_blocation");
-			configureEventMenu.Display(param1, MENU_TIME_FOREVER);	
+			configureEventMenu.Display(param1, MENU_TIME_FOREVER);
 		}
 		if (StrEqual(info, "rlocation", false)) {
 			FakeClientCommand(param1, "sm_rlocation");
-			configureEventMenu.Display(param1, MENU_TIME_FOREVER);	
+			configureEventMenu.Display(param1, MENU_TIME_FOREVER);
 		}
 		if (StrEqual(info, "slocation", false)) {
 			FakeClientCommand(param1, "sm_setspectate");
 			configureEventMenu.Display(param1, MENU_TIME_FOREVER);
 		}
-		if (StrEqual(info, "class", false)) {		
-			if (eventClass < 9)eventClass++;
-			else eventClass = 0;
-			ConfigureMenuBuilder();
+		if (StrEqual(info, "class", false)) {
+			skipChat = true;
+			FakeClientCommand(param1, "sm_setclass");
 			configureEventMenu.Display(param1, MENU_TIME_FOREVER);
+			skipChat = false;
 		}
-		if (StrEqual(info, "stripmenu", false))stripMenu.Display(param1, MENU_TIME_FOREVER);
+		if (StrEqual(info, "stripmenu", false))
+			if (!eventStart)
+				stripMenu.Display(param1, MENU_TIME_FOREVER);
+			else {
+				CPrintToChat(param1, "{GREEN}[Event]{Default} You can not modify event parameters while an event is running");
+				configureEventMenu.Display(param1, MENU_TIME_FOREVER);
+			}
 		if (StrEqual(info, "startevent", false)) {
 			FakeClientCommand(param1, "sm_startevent");
 		}
@@ -320,28 +347,32 @@ public int ConfigureMenuHandler(Menu menu, MenuAction action, int param1, int pa
 
 public int StripMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
 	if (action == MenuAction_Select) {
-		char info[32];
-		stripMenu.GetItem(param2, info, sizeof(info));
-		if (StrEqual(info, "strip1", false)) {
-			if (s1)s1 = false;
-			else s1 = true;
+		if(!eventStart) {
+			char info[32];
+			stripMenu.GetItem(param2, info, sizeof(info));
+			if (StrEqual(info, "strip1", false)) {
+				if (s1)s1 = false;
+				else s1 = true;
+			}
+			if (StrEqual(info, "strip2", false)) {
+				if (s2)s2 = false;
+				else s2 = true;
+			}
+			if (StrEqual(info, "strip3", false)) {
+				if (s3)s3 = false;
+				else s3 = true;
+			}
+			if (StrEqual(info, "strip4", false)) {
+				if (s4)s4 = false;
+				else s4 = true;
+			}
+			if (StrEqual(info, "strip5", false)) {
+				if (s5)s5 = false;
+				else s5 = true;
+			}
 		}
-		if (StrEqual(info, "strip2", false)) {
-			if (s2)s2 = false;
-			else s2 = true;
-		}
-		if (StrEqual(info, "strip3", false)) {
-			if (s3)s3 = false;
-			else s3 = true;
-		}
-		if (StrEqual(info, "strip4", false)) {
-			if (s4)s4 = false;
-			else s4 = true;
-		}
-		if (StrEqual(info, "strip5", false)) {
-			if (s5)s5 = false;
-			else s5 = true;
-		}
+		else
+			CPrintToChat(param1, "{GREEN}[Event]{Default} You can not modify event parameters while an event is running");
 		StripMenuBuilder();
 		stripMenu.Display(param1, MENU_TIME_FOREVER);
 	}
@@ -440,6 +471,7 @@ public void ConfigureMenuBuilder() {
 	char bLocationStatus[32];
 	char rLocationStatus[32];
 	char sLocationStatus[32];
+	char classStatus[32];
 	
 	Format(bLocationStatus, sizeof(bLocationStatus), "Set blu spawn: %s", bLocationSet ? "Enabled" : "Disabled");
 	configureEventMenu.AddItem("blocation", bLocationStatus);
@@ -447,39 +479,8 @@ public void ConfigureMenuBuilder() {
 	configureEventMenu.AddItem("rlocation", rLocationStatus);
 	Format(sLocationStatus, sizeof(sLocationStatus), "Spectate: %s", sLocationSet ? "Enabled" : "Disabled");
 	configureEventMenu.AddItem("slocation", sLocationStatus);
-	switch(classArray[eventClass]) {
-		case 0: {
-			configureEventMenu.AddItem("class", "Select class: Any");
-		}
-		
-		case 1:	{
-			configureEventMenu.AddItem("class", "Select class: Scout");
-		}
-		case 3: {
-			configureEventMenu.AddItem("class", "Select class: Soldier");
-		}
-		case 7:	{
-			configureEventMenu.AddItem("class", "Select class: Pyro");
-		}
-		case 4:	{
-			configureEventMenu.AddItem("class", "Select class: Demo");
-		}
-		case 6:	{
-			configureEventMenu.AddItem("class", "Select class: Heavy");
-		}
-		case 9:	{
-			configureEventMenu.AddItem("class", "Select class: Engineer");
-		}
-		case 5:	{
-			configureEventMenu.AddItem("class", "Select class: Medic");
-		}
-		case 2:	{
-			configureEventMenu.AddItem("class", "Select class: Sniper");
-		}
-		case 8:	{
-			configureEventMenu.AddItem("class", "Select class: Spy");
-		}
-	}
+	Format(classStatus, sizeof(classStatus), "Select class: %s", classStringArray[eventClass]);
+	configureEventMenu.AddItem("class", classStatus);
 	configureEventMenu.AddItem("stripmenu", "Strip weapons");
 	configureEventMenu.AddItem("startevent", "Start an event");
 }
