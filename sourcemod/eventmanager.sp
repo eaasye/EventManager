@@ -2,7 +2,7 @@
 #include <tf2_stocks>
 #include <sdktools>
 #include <morecolors>
-//Comment out these includes if you don't use on them on your server(and comment at line 506)
+//Comment out these includes if you don't use on them on your server(and comment at line 448)
 #include <basecomm>
 #include <sourcecomms>
 
@@ -54,7 +54,7 @@ public void OnPluginStart() {
 	RegAdminCmd("sm_blocation", Command_SetBluLocation, ADMFLAG_GENERIC, "Set's the location where blu will teleport to.");
 	RegAdminCmd("sm_rlocation", Command_SetRedLocation, ADMFLAG_GENERIC, "Set's the location where red will teleport to.");
 	RegAdminCmd("sm_setspectate", Command_SetSpectateLocation, ADMFLAG_GENERIC, "Set's the location where spectators will teleport to.");
-	RegAdminCmd("sm_setclass", Command_SetClass, ADMFLAG_GENERIC, "Set's the class the player will be set to before joining the event.");
+	RegAdminCmd("sm_eclass", Command_EClass, ADMFLAG_GENERIC, "Set's the class the player will be set to before joining the event.");
 	RegAdminCmd("sm_event", Command_EventMenu, ADMFLAG_GENERIC, "Opens the menu interface for event manager plugin.");
 	
 	RegConsoleCmd("sm_joinevent", Command_JoinEvent, "When an event is started, use this to join it!");
@@ -196,7 +196,7 @@ public Action Command_SetSpectateLocation(int client, int args) {
 	return Plugin_Handled;
 }
 
-public Action Command_SetClass(int client, int args) {
+public Action Command_EClass(int client, int args) {
 	if(eventStart) {
 		CPrintToChat(client, "{GREEN}[Event]{Default} You can not modify event parameters while an event is running");
 		return Plugin_Handled;
@@ -327,7 +327,7 @@ public int ConfigureMenuHandler(Menu menu, MenuAction action, int param1, int pa
 		}
 		if (StrEqual(info, "class", false)) {
 			skipChat = true;
-			FakeClientCommand(param1, "sm_setclass");
+			FakeClientCommand(param1, "sm_eclass");
 			configureEventMenu.Display(param1, MENU_TIME_FOREVER);
 			skipChat = false;
 		}
